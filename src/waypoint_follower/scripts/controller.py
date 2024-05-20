@@ -117,7 +117,7 @@ class WaypointFollower():
     def __init__(self):
         # ROS init
         rospy.init_node('wpt_follwer')
-        self.control_freq = 100
+        self.control_freq = 1000
         self.rate = rospy.Rate(self.control_freq)
 
         # Params
@@ -168,7 +168,7 @@ class WaypointFollower():
         """
         steer = 0
 
-        k = 2.0
+        k = 3.0
         steer = error_yaw 
         if self.ego_vx != 0:
             steer += math.atan2(k*error_y, self.ego_vx)

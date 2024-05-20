@@ -307,7 +307,7 @@ class SimulateStep(object):
 def main():
     rospy.init_node('simulate_dynamics')
 
-    dt              = 0.05 # simulation timestep [sec]
+    dt              = 1/100 # simulation timestep [sec]
     realtime_factor = 1.
     Hz              = int(1/dt)
     stateDim        = 4
