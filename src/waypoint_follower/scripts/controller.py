@@ -38,8 +38,22 @@ def global2local(ego_x, ego_y, ego_yaw, x_list, y_list):
         - ego_x, ego_y, ego_yaw        : ego vehicle's current pose.
         - output_x_list, output_y_list : transformed local coordinate trajectory.
     """
-    output_x_list = x_list
-    output_y_list = y_list
+    R = np.mat(
+       [[math.cos(-ego_yaw),  -math.sin(-ego_yaw), -(math.cos(-ego_yaw)*ego_x-math.sin(-ego_yaw)*ego_y)],
+        [math.sin(-ego_yaw),   math.cos(-ego_yaw), -(math.sin(-ego_yaw)*ego_x+math.cos(-ego_yaw)*ego_y)],
+        [            0,               0,                                          1]]
+    )
+    
+    global_traj = np.vstack(
+       [np.mat(x_list),
+        np.mat(y_list),
+        np.ones_like(x_list)]
+    )
+
+    local_traj = np.matmul(R, global_traj)
+
+    output_x_list = local_traj[0,:]
+    output_y_list = local_traj[1,:]
 
     return output_x_list, output_y_list
 
@@ -51,9 +65,12 @@ def find_nearest_point(ego_x, ego_y, x_list, y_list):
         - Use 'calc_dist' function to calculate distance.
         - Use np.argmin for finding the index whose value is minimum.
     """
-
-    near_ind = -1
-    near_dist = 0
+    diff = np.mat([(x_list-ego_x),
+                   (y_list-ego_y)])
+    dist = np.linalg.norm(diff, axis=0)
+   
+    near_ind = np.argmin(dist)
+    near_dist = dist[near_ind]
 
     return near_dist, near_ind
 
@@ -84,24 +101,38 @@ def calc_error(ego_x, ego_y, ego_yaw, x_list, y_list, wpt_look_ahead=0):
 
     # 3. Set lookahead waypoint (index increment of waypoint trajectory)
     # lookahead_wpt_ind = near_ind + wpt_look_ahead
-    lookahead_wpt_ind = -1
+    lookahead_wpt_ind = (near_ind+wpt_look_ahead)%len(x_list)
+    lookahead_wpt = (local_x_list.item(lookahead_wpt_ind), local_y_list.item(lookahead_wpt_ind))
+    next_lookahead_wpt_ind = (near_ind+wpt_look_ahead+1)%len(x_list)
+    next_lookahead_wpt = (local_x_list.item(next_lookahead_wpt_ind), local_y_list.item(next_lookahead_wpt_ind))
 
     # 4. Calculate errors
-    error_yaw = 0
+    error_yaw = math.atan2(next_lookahead_wpt[1]-lookahead_wpt[1], next_lookahead_wpt[0]-lookahead_wpt[0])
     error_yaw = normalize_angle(error_yaw) # Normalize angle to [-pi, +pi]
-    error_y   = 0
-    
+    error_y   = lookahead_wpt[1]
+
     return error_y, error_yaw
 
 class WaypointFollower():
     def __init__(self):
         # ROS init
         rospy.init_node('wpt_follwer')
-        self.rate = rospy.Rate(100.0)
+        self.control_freq = 100
+        self.rate = rospy.Rate(self.control_freq)
 
         # Params
         self.target_speed = 10/3.6
         self.MAX_STEER    = np.deg2rad(17.75)
+
+        self.THR_P = 0.75
+        self.THR_I = 0.25
+        self.THR_D = 0.25
+
+        # integral term
+        self.THR_IMAX = 250
+        self.error_v_i = 0
+        # derivative term
+        self.error_v_prev = 0
 
         # vehicle state
         self.ego_x   = 0
@@ -109,7 +140,7 @@ class WaypointFollower():
         self.ego_yaw = 0
         self.ego_vx  = 0
 
-        self.wpt_look_ahead = 0   # [index]
+        self.wpt_look_ahead = 1   # [index]
 
         # Pub/Sub
         self.pub_command = rospy.Publisher('control', AckermannDriveStamped, queue_size=5)
@@ -137,8 +168,15 @@ class WaypointFollower():
         """
         steer = 0
 
+        k = 2.0
+        steer = error_yaw 
+        if self.ego_vx != 0:
+            steer += math.atan2(k*error_y, self.ego_vx)
+
         # Control limit
         steer = np.clip(steer, -self.MAX_STEER, self.MAX_STEER)
+
+        steer = steer * self.MAX_STEER
 
         return steer
 
@@ -148,7 +186,14 @@ class WaypointFollower():
         Implement a speed controller (PID controller).
         You can use not only error_v, but also other input arguments for this controller if you want.
         """
-        throttle = 0
+        # PID : Kp * error + Ki * integral(error) - Kd * derivative(error)
+        # integral error = integral error + error * dt = integral error + error / control_freq
+        # derivative error = (error - prev_error) / dt
+        throttle = error_v*self.THR_P + min(self.THR_IMAX, self.error_v_i)/self.control_freq*self.THR_I - (error_v-self.error_v_prev)/self.control_freq*self.THR_D
+
+        self.error_v_i += error_v
+        self.error_v_i = min(self.THR_IMAX, self.error_v_i)
+        self.error_v_prev = error_v
                 
         return throttle
 
