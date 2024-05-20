@@ -188,8 +188,8 @@ class WaypointFollower():
         """
         # PID : Kp * error + Ki * integral(error) - Kd * derivative(error)
         # integral error = integral error + error * dt = integral error + error / control_freq
-        # derivative error = (error - prev_error) / dt
-        throttle = error_v*self.THR_P + min(self.THR_IMAX, self.error_v_i)/self.control_freq*self.THR_I - (error_v-self.error_v_prev)/self.control_freq*self.THR_D
+        # derivative error = (error - prev_error) / dt = (error - prev_error) * control_freq
+        throttle = error_v*self.THR_P + min(self.THR_IMAX, self.error_v_i)/self.control_freq*self.THR_I - (error_v-self.error_v_prev)*self.control_freq*self.THR_D
 
         self.error_v_i += error_v
         self.error_v_i = min(self.THR_IMAX, self.error_v_i)
