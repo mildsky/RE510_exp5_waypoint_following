@@ -124,9 +124,11 @@ class WaypointFollower():
         self.target_speed = 10/3.6
         self.MAX_STEER    = np.deg2rad(17.75)
 
-        self.THR_P = 0.75
-        self.THR_I = 0.25
-        self.THR_D = 0.25
+        self.THR_P = 1.6
+        self.THR_I = 0.4
+        self.THR_D = 0.1
+
+        self.STEER_P = 3.0
 
         # integral term
         self.THR_IMAX = 250
@@ -168,10 +170,9 @@ class WaypointFollower():
         """
         steer = 0
 
-        k = 3.0
         steer = error_yaw 
         if self.ego_vx != 0:
-            steer += math.atan2(k*error_y, self.ego_vx)
+            steer += math.atan2(self.STEER_P*error_y, self.ego_vx)
 
         # Control limit
         steer = np.clip(steer, -self.MAX_STEER, self.MAX_STEER)
@@ -189,7 +190,7 @@ class WaypointFollower():
         # PID : Kp * error + Ki * integral(error) - Kd * derivative(error)
         # integral error = integral error + error * dt = integral error + error / control_freq
         # derivative error = (error - prev_error) / dt = (error - prev_error) * control_freq
-        throttle = error_v*self.THR_P + min(self.THR_IMAX, self.error_v_i)/self.control_freq*self.THR_I - (error_v-self.error_v_prev)*self.control_freq*self.THR_D
+        throttle = error_v*self.THR_P + self.error_v_i/self.control_freq*self.THR_I - (error_v-self.error_v_prev)*self.control_freq*self.THR_D
 
         self.error_v_i += error_v
         self.error_v_i = min(self.THR_IMAX, self.error_v_i)
