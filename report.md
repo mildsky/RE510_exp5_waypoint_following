@@ -29,7 +29,6 @@ $$
   \delta (t) = \tan^{-1}(\dfrac{2 L \sin(\alpha (t))}{\mathcal{l}_d})
   $$
   
-
 - Stanely controller manages vehicle control by accounting for both the heading angle error and the position error relative to the lane. The control point is shifted to the front wheel to ensure it follows the lane accurately. Steering anlge can be calculated as below.
      $$
      \delta(t) = \theta_p (t) + \tan^{-1}(\dfrac{k e_{fa}(t)}{v_x(t)})
@@ -116,7 +115,7 @@ def speed_control(self, error_v):
 
 ## Result
 
- In this assignment, I implemented a controller for a simple autonomous vehicle designed to follow a set of waypoints. I chose the Stanley method for this task, a popular control technique known for its effectiveness in minimizing cross-track error. The controller was able to achieve a cross-track error of 0.034 and a speed error of 0.225, which are satisfactory results for this application. These performance metrics indicate that the Stanley method is a robust choice for maintaining the vehicle's trajectory closely aligned with the desired path while keeping speed deviations minimal.
+ In this assignment, I implemented a controller for a simple autonomous vehicle designed to follow a set of waypoints. I chose the Stanley method for this task, a popular control technique known for its effectiveness in minimizing cross-track error. The controller was able to achieve a cross-track error of 0.034 and a speed error of 0.225, which are satisfactory results for this application. Error was keep reducing while running the track, since almost all error comes from initial part. If vehicle started on the road, error would be very small. These performance metrics indicate that the Stanley method is a robust choice for maintaining the vehicle's trajectory closely aligned with the desired path while keeping speed deviations minimal.
 
 ## Discussion
 
